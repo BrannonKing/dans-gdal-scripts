@@ -38,8 +38,6 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 #include <limits>
 #include <string>
 
-#include <boost/format.hpp>
-
 #include <ogr_api.h>
 
 #include "common.h"

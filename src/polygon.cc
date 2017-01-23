@@ -841,7 +841,7 @@ Mpoly mpoly_from_wktfile(const std::string &fn) {
 	OGRGeometryH geom;
 	char *wkt_str = strdup(wkt.c_str());
 	char *wkt_str2 = wkt_str;
-	OGRErr err = OGR_G_CreateFromWkt(&wkt_str2, NULL, &geom);
+	OGRErr err = OGR_G_CreateFromWkt(&wkt_str2, nullptr, &geom);
 	free(wkt_str);
 	if(OGRERR_NONE != err) {
 		fatal_error("OGR_G_CreateFromWkt failed: %d", err);

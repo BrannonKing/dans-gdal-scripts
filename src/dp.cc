@@ -377,7 +377,7 @@ void fix_topology(const Mpoly &mpoly, std::vector<ReducedRing> &reduced_rings) {
 		// flag segments that cross
 		for(size_t r1_idx=0; r1_idx < mpoly.rings.size(); r1_idx++) {
 			GDALTermProgress(firsthalf_progress*
-				pow((double)r1_idx / (double)mpoly.rings.size(), 2), NULL, NULL);
+				pow((double)r1_idx / (double)mpoly.rings.size(), 2), nullptr, nullptr);
 			const Ring &c1 = mpoly.rings[r1_idx];
 			const ReducedRing &r1 = reduced_rings[r1_idx];
 			std::vector<bool> &p1 = mp_problems[r1_idx];
@@ -413,7 +413,7 @@ void fix_topology(const Mpoly &mpoly, std::vector<ReducedRing> &reduced_rings) {
 	}
 
 	double progress = firsthalf_progress;
-	GDALTermProgress(progress, NULL, NULL);
+	GDALTermProgress(progress, nullptr, nullptr);
 
 	if(num_problems) {
 		if(VERBOSE) printf("fixing %d crossed segments from reduction\n", num_problems/2);
@@ -453,7 +453,7 @@ void fix_topology(const Mpoly &mpoly, std::vector<ReducedRing> &reduced_rings) {
 			{
 				double alpha = double(r1_idx) / mpoly.rings.size();
 				double p = progress + (1.0-progress)/2*alpha;
-				GDALTermProgress(p, NULL, NULL);
+				GDALTermProgress(p, nullptr, nullptr);
 			}
 
 			const Ring &c1 = mpoly.rings[r1_idx];
@@ -500,7 +500,7 @@ void fix_topology(const Mpoly &mpoly, std::vector<ReducedRing> &reduced_rings) {
 		progress += (1.0-progress)/2;
 	} // while problems
 
-	GDALTermProgress(1, NULL, NULL);
+	GDALTermProgress(1, nullptr, nullptr);
 
 	if(num_problems) {
 		printf("WARNING: Could not fix all topology problems.\n  Please inspect output shapefile manually.\n");

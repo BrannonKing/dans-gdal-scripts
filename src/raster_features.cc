@@ -24,10 +24,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 This code was developed by Dan Stahlke for the Geographic Information Network of Alaska.
 */
 
-
-
-#include <boost/foreach.hpp>
-
 #include "raster_features.h"
 
 namespace dangdal {
@@ -38,14 +34,17 @@ FeatureInterpreter::BandInfo::BandInfo() :
 	is_int(0),
 	is_double(0),
 	is_complex(0),
-	color_table(NULL),
-	ogr_fld(NULL)
+	color_table(nullptr),
+	ogr_fld(nullptr)
 { }
 
 // GDALCopyWords doesn't allow const input
 int32_t FeatureInterpreter::BandInfo::val_to_int(FeatureRawVal rawval) const {
 	return gdal_scalar_to_int32(&rawval[raw_val_offset], dt);
 }
+
+constexpr char hexmap[] = { '0', '1', '2', '3', '4', '5', '6', '7',
+'8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 // GDALCopyWords doesn't allow const input
 double FeatureInterpreter::BandInfo::val_to_double(FeatureRawVal rawval) const {
@@ -56,17 +55,17 @@ std::string FeatureInterpreter::BandInfo::val_to_str(const FeatureRawVal &rawval
 	if(color_table) {
 		const GDALColorEntry *color = GDALGetColorEntry(color_table,
 				val_to_int(rawval));
-		return str(boost::format("%d, %d, %d, %d") %
-				color->c1 % color->c2 % color->c3 % color->c4);
+		return std::to_string(color->c1) + ", " + std::to_string(color->c2) + ", " + std::to_string(color->c3) + ", " + std::to_string(color->c4);
 	} else if(is_int) {
-		return str(boost::format("%d") % val_to_int(rawval));
+		return std::to_string(val_to_int(rawval));
 	} else if(is_double) {
-		return str(boost::format("%g") % val_to_double(rawval));
+		return std::to_string(val_to_double(rawval));
 	} else {
 		std::string ret = "0x";
 		for(size_t i=0; i<raw_val_size; i++) {
 			uint8_t v = rawval[raw_val_offset + i];
-			ret += str(boost::format("%02x") % int(v));
+			ret += hexmap[(v & 0xF0) >> 4];
+			ret += hexmap[(v & 0x0F)];
 		}
 		return ret;
 	}
@@ -74,7 +73,7 @@ std::string FeatureInterpreter::BandInfo::val_to_str(const FeatureRawVal &rawval
 
 FeatureInterpreter::FeatureInterpreter(GDALDatasetH ds, std::vector<size_t> band_ids) {
 	size_t offset = 0;
-	BOOST_FOREACH(const size_t band_id, band_ids) {
+	for(const size_t band_id: band_ids) {
 		BandInfo bi;
 
 		GDALRasterBandH band = GDALGetRasterBand(ds, band_id);
@@ -83,7 +82,7 @@ FeatureInterpreter::FeatureInterpreter(GDALDatasetH ds, std::vector<size_t> band
 		if(band_ids.size() == 1) {
 			bi.label = "value";
 		} else {
-			bi.label = str(boost::format("band%d") % band_id);
+			bi.label = "band" + std::to_string(band_id);
 		}
 
 		bi.dt = GDALGetRasterDataType(band);
@@ -140,15 +139,15 @@ FeatureInterpreter::FeatureInterpreter(GDALDatasetH ds, std::vector<size_t> band
 			for(int i=0; i<gdal_color_table_size; i++) {
 				std::string label;
 				if(band_ids.size() > 1) {
-					label = str(boost::format("band%d.") % band_id);
+					label = "band" + std::to_string(band_id);
 				}
-				label += str(boost::format("c%d") % (i+1));
+				label += "c" + std::to_string(i + 1);
 
 				bi.ogr_pal_fld[i].first = label;
 				bi.ogr_pal_fld[i].second = OGR_Fld_Create(label.c_str(), OFTInteger);
 			}
 		} else {
-			bi.color_table = NULL;
+			bi.color_table = nullptr;
 		}
 
 		band_info_list.push_back(bi);
@@ -165,11 +164,11 @@ std::string FeatureInterpreter::pixel_to_string(const FeatureRawVal &rawval) con
 }
 
 void FeatureInterpreter::create_ogr_fields(OGRLayerH ogr_layer) const {
-	BOOST_FOREACH(const BandInfo &bi, band_info_list) {
+	for(const BandInfo &bi: band_info_list) {
 		OGR_L_CreateField(ogr_layer, bi.ogr_fld, TRUE);
 		if(bi.color_table) {
 			typedef std::map<std::string, OGRFieldDefnH>::value_type fld_pair_t;
-			BOOST_FOREACH(const fld_pair_t &f, bi.ogr_pal_fld) {
+			for(const fld_pair_t &f: bi.ogr_pal_fld) {
 				OGR_L_CreateField(ogr_layer, f.second, TRUE);
 			}
 		}
@@ -177,7 +176,7 @@ void FeatureInterpreter::create_ogr_fields(OGRLayerH ogr_layer) const {
 }
 
 void FeatureInterpreter::set_ogr_fields(OGRLayerH ogr_layer, OGRFeatureH ogr_feat, const FeatureRawVal &rawval) const {
-	BOOST_FOREACH(const BandInfo &bi, band_info_list) {
+	for(const BandInfo &bi: band_info_list) {
 		int fld_idx = OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(ogr_layer), bi.label.c_str());
 		// Did you remember to call create_ogr_fields?
 		if(fld_idx < 0) fatal_error("cannot get OGR field %s", bi.label.c_str());
@@ -235,7 +234,7 @@ FeatureBitmap::Index FeatureBitmap::get_index(const FeatureRawVal &pixel) {
 
 void FeatureBitmap::dump_feature_table() const {
 	typedef std::map<FeatureRawVal, Index>::value_type table_pair_t;
-	BOOST_FOREACH(const table_pair_t &f, table) {
+	for(const table_pair_t &f: table) {
 		printf("feature %d:", f.second);
 		for(size_t i=0; i<f.first.size(); i++) {
 			if(i) printf(",");
@@ -268,7 +267,7 @@ FeatureBitmap *FeatureBitmap::from_raster(
 	if(VERBOSE) printf("input is %zd x %zd x %zd\n", w, h, band_count);
 
 	std::vector<GDALRasterBandH> bands;
-	BOOST_FOREACH(const size_t band_id, band_ids) {
+	for(const size_t band_id: band_ids) {
 		if(VERBOSE) printf("opening band %zd\n", band_id);
 		GDALRasterBandH band = GDALGetRasterBand(ds, band_id);
 		if(!band) fatal_error("Could not open band %zd.", band_id);
@@ -278,7 +277,7 @@ FeatureBitmap *FeatureBitmap::from_raster(
 	int blocksize_x_int, blocksize_y_int;
 	GDALGetBlockSize(bands[0], &blocksize_x_int, &blocksize_y_int);
 	// Out of laziness, I am hoping that images always have the same block size for each band.
-	BOOST_FOREACH(const GDALRasterBandH band, bands) {
+	for(const GDALRasterBandH band: bands) {
 		int bx, by;
 		GDALGetBlockSize(band, &bx, &by);
 		if(bx != blocksize_x_int || by != blocksize_y_int) {
@@ -294,7 +293,7 @@ FeatureBitmap *FeatureBitmap::from_raster(
 	std::vector<size_t> dt_sizes;
 	size_t dt_total_size = 0;
 	if(VERBOSE >= 2) printf("datatype sizes:");
-	BOOST_FOREACH(const GDALRasterBandH band, bands) {
+	for(const GDALRasterBandH band: bands) {
 		GDALDataType dt = GDALGetRasterDataType(band);
 		datatypes.push_back(dt);
 		size_t s = GDALGetDataTypeSize(dt) / 8;
@@ -335,7 +334,7 @@ FeatureBitmap *FeatureBitmap::from_raster(
 					boff_y * w +
 					boff_x * bsize_y
 				) / (w * h);
-			GDALTermProgress(progress, NULL, NULL);
+			GDALTermProgress(progress, nullptr, nullptr);
 
 			for(size_t band_idx=0; band_idx<bands.size(); band_idx++) {
 				GDALReadBlock(bands[band_idx], block_x, block_y, &band_buf[band_idx][0]);
@@ -392,7 +391,7 @@ FeatureBitmap *FeatureBitmap::from_raster(
 		}
 	}
 
-	GDALTermProgress(1, NULL, NULL);
+	GDALTermProgress(1, nullptr, nullptr);
 
 	printf("Found %zd valid and %zd NDV pixels.\n", num_valid, num_ndv);
 
@@ -430,7 +429,7 @@ FeatureBitmap *FeatureBitmap::from_raster(
 //	dbuf->writePlot("zz.ppm");
 //
 //	typedef std::map<FeatureRawVal, FeatureBitmap::Index>::value_type feature_pair_t;
-//	BOOST_FOREACH(const feature_pair_t &f, fbm->feature_table()) {
+//	for(const feature_pair_t &f, fbm->feature_table()) {
 //		printf("feature %d: %s\n", f.second, interp.pixel_to_string(f.first).c_str());
 //	}
 //

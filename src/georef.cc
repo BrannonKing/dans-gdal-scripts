@@ -29,8 +29,6 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 #include <string>
 #include <cassert>
 
-#include <boost/lexical_cast.hpp>
-
 #include "common.h"
 #include "georef.h"
 
@@ -82,28 +80,28 @@ GeoOpts::GeoOpts(std::vector<std::string> &arg_list) :
 					geo_srs = arg_list[argp++];
 				} else if(arg == "-ll_en") {
 					if(argp+2 > arg_list.size()) usage(cmdname);
-					given_left_e = boost::lexical_cast<double>(arg_list[argp++]);
-					given_lower_n = boost::lexical_cast<double>(arg_list[argp++]);
+					given_left_e = std::stod(arg_list[argp++]);
+					given_lower_n = std::stod(arg_list[argp++]);
 					got_ll_en = true;
 				} else if(arg == "-ul_en") {
 					if(argp+2 > arg_list.size()) usage(cmdname);
-					given_left_e = boost::lexical_cast<double>(arg_list[argp++]);
-					given_upper_n = boost::lexical_cast<double>(arg_list[argp++]);
+					given_left_e = std::stod(arg_list[argp++]);
+					given_upper_n = std::stod(arg_list[argp++]);
 					got_ul_en = true;
 				} else if(arg == "-wh") {
 					if(argp+2 > arg_list.size()) usage(cmdname);
-					w = boost::lexical_cast<size_t>(arg_list[argp++]);
-					h = boost::lexical_cast<size_t>(arg_list[argp++]);
+					w = static_cast<size_t>(std::stol(arg_list[argp++]));
+					h = static_cast<size_t>(std::stol(arg_list[argp++]));
 				} else if(arg == "-res") {
 					if(argp == arg_list.size()) usage(cmdname);
-					res_x = boost::lexical_cast<double>(arg_list[argp++]);
+					res_x = std::stod(arg_list[argp++]);
 
 					if(argp == arg_list.size()) usage(cmdname);
-					res_y = boost::lexical_cast<double>(arg_list[argp++]);
+					res_y = std::stod(arg_list[argp++]);
 				} else {
 					args_out.push_back(arg);
 				}
-			} catch(boost::bad_lexical_cast &e) {
+			} catch(...) {
 				fatal_error("cannot parse number given on command line");
 			}
 		} else {
@@ -120,9 +118,9 @@ GeoRef::GeoRef(GeoOpts opt, const GDALDatasetH ds) {
 	if(!ds && !(opt.s_srs.size() && (opt.got_ll_en || opt.got_ul_en) && 
 		opt.w && opt.h && opt.res_x && opt.res_y)) fatal_error("not enough information to determine geolocation");
 
-	spatial_ref = NULL;
+	spatial_ref = nullptr;
 	if(opt.s_srs.size()) {
-		spatial_ref = OSRNewSpatialReference(NULL);
+		spatial_ref = OSRNewSpatialReference(nullptr);
 		if(OSRImportFromProj4(spatial_ref, opt.s_srs.c_str())
 			!= OGRERR_NONE) fatal_error("cannot parse proj4 definition");
 	} else if(ds) {
@@ -134,13 +132,13 @@ GeoRef::GeoRef(GeoOpts opt, const GDALDatasetH ds) {
 	}
 
 	if(spatial_ref) {
-		char *s_srs_str = NULL;
+		char *s_srs_str = nullptr;
 		OSRExportToProj4(spatial_ref, &s_srs_str);
 		assert(s_srs_str);
 		s_srs = s_srs_str;
 
 		if(opt.geo_srs.size()) {
-			geo_sref = OSRNewSpatialReference(NULL);
+			geo_sref = OSRNewSpatialReference(nullptr);
 			if(OSRImportFromProj4(geo_sref, opt.geo_srs.c_str())
 				!= OGRERR_NONE) fatal_error("cannot parse proj4 definition");
 			// take only the geographic part of the definition
@@ -149,7 +147,7 @@ GeoRef::GeoRef(GeoOpts opt, const GDALDatasetH ds) {
 			geo_sref = OSRCloneGeogCS(spatial_ref);
 		}
 
-		char *geo_srs_str = NULL;
+		char *geo_srs_str = nullptr;
 		OSRExportToProj4(geo_sref, &geo_srs_str);
 		assert(geo_srs_str);
 		geo_srs = geo_srs_str;
@@ -157,10 +155,10 @@ GeoRef::GeoRef(GeoOpts opt, const GDALDatasetH ds) {
 		fwd_xform = OCTNewCoordinateTransformation(spatial_ref, geo_sref);
 		inv_xform = OCTNewCoordinateTransformation(geo_sref, spatial_ref);
 	} else {
-		fwd_xform = NULL;
-		inv_xform = NULL;
+		fwd_xform = nullptr;
+		inv_xform = nullptr;
 		s_srs.erase();
-		geo_sref = NULL;
+		geo_sref = nullptr;
 	}
 
 	if(ds) {
@@ -251,14 +249,14 @@ GeoRef::GeoRef(GeoOpts opt, const GDALDatasetH ds) {
 		}
 
 		if(OSRIsProjected(spatial_ref)) {
-			char *units_name_str = NULL;
+			char *units_name_str = nullptr;
 			units_val = OSRGetLinearUnits(spatial_ref, &units_name_str);
 			//printf("units: %s, %lf\n", units_name_str?units_name_str:"null", units_val);
 			if(units_name_str) units_name = units_name_str;
 			res_meters_x = units_val * res_x;
 			res_meters_y = units_val * res_y;
 		} else if(OSRIsGeographic(spatial_ref)) {
-			char *units_name_str = NULL;
+			char *units_name_str = nullptr;
 			units_val = OSRGetAngularUnits(spatial_ref, &units_name_str);
 			//printf("ang units: %s, %lf\n", units_name_str?units_name_str:"null", units_val);
 			if(units_name_str) units_name = units_name_str;
@@ -337,7 +335,7 @@ bool GeoRef::en2ll(
 
 	double u = east;
 	double v = north;
-	if(!OCTTransform(fwd_xform, 1, &u, &v, NULL)) {
+	if(!OCTTransform(fwd_xform, 1, &u, &v, nullptr)) {
 		return 1;
 	}
 	double lon = u;
@@ -379,7 +377,7 @@ bool GeoRef::ll2en(
 
 	double u = lon;
 	double v = lat;
-	if(!OCTTransform(inv_xform, 1, &u, &v, NULL)) {
+	if(!OCTTransform(inv_xform, 1, &u, &v, nullptr)) {
 		return 1;
 	}
 	double east = u;

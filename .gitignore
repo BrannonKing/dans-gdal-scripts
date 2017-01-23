@@ -31,3 +31,11 @@ src/gdal_raw2geotiff
 src/gdal_trace_outline
 src/gdal_wkt_to_mask
 dans-gdal-scripts-*.tar.gz
+/build/trace/Debug
+/build/trace/x64/Release
+*.user
+*.suo
+/build/trace/x64/Debug
+/build/x64
+/build/VS2015.VC.VC.opendb
+/build/VS2015.VC.db

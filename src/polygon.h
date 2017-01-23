@@ -128,8 +128,8 @@ public:
 		size_t max_leaf_size = 20,
 		bool axis = 0
 	) :
-		left(NULL),
-		right(NULL)
+		left(nullptr),
+		right(nullptr)
 	{
 		leaf_items = items;
 

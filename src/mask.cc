@@ -29,8 +29,6 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 #include <vector>
 #include <algorithm>
 
-#include <boost/foreach.hpp>
-
 #include "common.h"
 #include "mask.h"
 #include "polygon.h"
@@ -53,7 +51,7 @@ BitGrid get_bitgrid_for_dataset(
 
 	std::vector<GDALRasterBandH> bands;
 	std::vector<GDALDataType> datatypes;
-	BOOST_FOREACH(const size_t band_id, band_ids) {
+	for(const size_t band_id: band_ids) {
 		if(VERBOSE) printf("opening band %zd\n", band_id);
 		GDALRasterBandH band = GDALGetRasterBand(ds, band_id);
 		if(!band) fatal_error("Could not open band %zd.", band_id);
@@ -65,7 +63,7 @@ BitGrid get_bitgrid_for_dataset(
 	int blocksize_x_int, blocksize_y_int;
 	GDALGetBlockSize(bands[0], &blocksize_x_int, &blocksize_y_int);
 	// Out of laziness, I am hoping that images always have the same block size for each band.
-	BOOST_FOREACH(const GDALRasterBandH band, bands) {
+	for(const GDALRasterBandH band: bands) {
 		int bx, by;
 		GDALGetBlockSize(band, &bx, &by);
 		if(bx != blocksize_x_int || by != blocksize_y_int) {
@@ -110,7 +108,7 @@ BitGrid get_bitgrid_for_dataset(
 					boff_y * w +
 					boff_x * bsize_y
 				) / (w * h);
-			GDALTermProgress(progress, NULL, NULL);
+			GDALTermProgress(progress, nullptr, nullptr);
 
 			for(size_t band_idx=0; band_idx<bands.size(); band_idx++) {
 				GDALReadBlock(bands[band_idx], block_x, block_y, &band_buf[band_idx][0]);
@@ -163,17 +161,18 @@ BitGrid get_bitgrid_for_dataset(
 		}
 	}
 
-	GDALTermProgress(1, NULL, NULL);
+	GDALTermProgress(1, nullptr, nullptr);
 
 	printf("Found %zd valid and %zd NDV pixels.\n", num_valid, num_ndv);
 
 	return mask;
 }
 
-void BitGrid::erode() { // FIXME - untested
+void BitGrid::erode(int minimum) { // FIXME - untested
 	bool *rowu = new bool[w];
 	bool *rowm = new bool[w];
 	bool *rowl = new bool[w];
+	int cnt;
 	for(int i=0; i<w; i++) {
 		rowm[i] = 0;
 		rowl[i] = get(i, 0, 0);
@@ -196,10 +195,21 @@ void BitGrid::erode() { // FIXME - untested
 			bool lr = (x+1<w) ? rowl[x+1] : 0;
 
 			// remove pixels that don't have two consecutive filled neighbors
-			if(!(
-				(ul&&um) || (um&&ur) || (ur&&mr) || (mr&&lr) ||
-				(lr&&lm) || (lm&&ll) || (ll&&ml) || (ml&&ul)
-			)) set(x, y, false);
+			cnt = 0;
+			cnt += ul&&um;
+			cnt += um&&ur;
+			cnt += ur&&mr;
+			cnt += mr&&lr;
+			cnt += lr&&lm;
+			cnt += lm&&ll;
+			cnt += ll&&ml;
+			cnt += ml&&ul;
+			//if(!(
+			//	(ul&&um) || (um&&ur) || (ur&&mr) || (mr&&lr) ||
+			//	(lr&&lm) || (lm&&ll) || (ll&&ml) || (ml&&ul)
+			//)) set(x, y, false);
+			if (cnt < minimum) 
+				set(x, y, false);
 
 			ul=um; ml=mm; ll=lm;
 			um=ur; mm=mr; lm=lr;

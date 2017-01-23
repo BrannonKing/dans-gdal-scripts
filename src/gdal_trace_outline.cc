@@ -29,9 +29,6 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 #include <map>
 #include <vector>
 
-#include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
-
 #include "common.h"
 #include "polygon.h"
 #include "polygon-rasterizer.h"
@@ -75,7 +72,7 @@ void usage(const std::string &cmdname) {
 "                               the no-data-value)\n"
 "  -b band_id -b band_id ...    Bands to inspect (default is all bands)\n"
 "  -invert                      Trace no-data pixels rather than data pixels\n"
-"  -erosion                     Erode pixels that don't have two consecutive\n"
+"  -erosion val                 Erode pixels that don't have val-number consecutive neighbors\n"
 "                               neighbors\n"
 "  -major-ring                  Take only the biggest outer ring\n"
 "  -no-donuts                   Take only top-level rings\n"
@@ -150,10 +147,10 @@ enum CoordSystem {
 struct GeomOutput {
 	explicit GeomOutput(CoordSystem _out_cs=CS_UNKNOWN) :
 		out_cs(_out_cs),
-		wkt_fh(NULL),
-		wkb_fh(NULL),
-		ogr_ds(NULL),
-		ogr_layer(NULL)
+		wkt_fh(nullptr),
+		wkb_fh(nullptr),
+		ogr_ds(nullptr),
+		ogr_layer(nullptr)
 	{ }
 
 	CoordSystem out_cs;
@@ -208,6 +205,7 @@ int main(int argc, char **argv) {
 	int64_t min_ring_area = 0;
 	double reduction_tolerance = 2;
 	bool do_erosion = 0;
+	int min_erosion = 0;
 	bool do_invert = 0;
 	double llproj_toler = 1;
 	double bevel_size = .1;
@@ -232,10 +230,12 @@ int main(int argc, char **argv) {
 					debug_report = arg_list[argp++];
 				} else if(arg == "-b") {
 					if(argp == arg_list.size()) usage(cmdname);
-					int bandid = boost::lexical_cast<int>(arg_list[argp++]);
+					int bandid = stoi(arg_list[argp++]);
 					inspect_bandids.push_back(bandid);
 				} else if(arg == "-erosion") {
+					if (argp == arg_list.size()) usage(cmdname);
 					do_erosion = 1;
+					min_erosion = stoi(arg_list[argp++]);
 				} else if(arg == "-invert") {
 					do_invert = 1;
 				} else if(arg == "-split-polys") {
@@ -275,20 +275,20 @@ int main(int argc, char **argv) {
 					output_no_donuts = 1;
 				} else if(arg == "-min-ring-area") {
 					if(argp == arg_list.size()) usage(cmdname);
-					min_ring_area = boost::lexical_cast<int64_t>(arg_list[argp++]);
+					min_ring_area = stoll(arg_list[argp++]);
 				} else if(arg == "-dp-toler") {
 					if(argp == arg_list.size()) usage(cmdname);
-					reduction_tolerance = boost::lexical_cast<double>(arg_list[argp++]);
+					reduction_tolerance = stod(arg_list[argp++]);
 				} else if(arg == "-bevel-size") {
 					if(argp == arg_list.size()) usage(cmdname);
-					bevel_size = boost::lexical_cast<double>(arg_list[argp++]);
+					bevel_size = stod(arg_list[argp++]);
 					if(bevel_size < 0 || bevel_size >= 1) fatal_error(
 						"-bevel-size must be in the range 0 <= bevel < 1");
 				} else if(arg == "-pinch-excursions") {
 					do_pinch_excursions = 1;
 				} else if(arg == "-llproj-toler") {
 					if(argp == arg_list.size()) usage(cmdname);
-					llproj_toler = boost::lexical_cast<double>(arg_list[argp++]);
+					llproj_toler = stod(arg_list[argp++]);
 				} else if(arg == "-containing" || arg == "-not-containing") {
 					if(argp+3 > arg_list.size()) usage(cmdname);
 					ContainingOption opt;
@@ -301,8 +301,8 @@ int main(int argc, char **argv) {
 					else if(cs == "percent") opt.cs = CS_PERCENT;
 					else fatal_error("unrecognized coordinate system for -containing option (%s)", cs.c_str());
 
-					opt.x = boost::lexical_cast<double>(arg_list[argp++]);
-					opt.y = boost::lexical_cast<double>(arg_list[argp++]);
+					opt.x = stod(arg_list[argp++]);
+					opt.y = stod(arg_list[argp++]);
 
 					containing_options.push_back(opt);
 				} else if(arg == "-h" || arg == "--help") {
@@ -310,7 +310,7 @@ int main(int argc, char **argv) {
 				} else {
 					fatal_error("unrecognized option: %s", arg.c_str());
 				}
-			} catch(boost::bad_lexical_cast &e) {
+			} catch(...) {
 				fatal_error("cannot parse number given on command line");
 			}
 		} else {
@@ -365,7 +365,7 @@ int main(int argc, char **argv) {
 			fatal_error("missing coordinate transform");
 	}
 
-	DebugPlot *dbuf = NULL;
+	DebugPlot *dbuf = nullptr;
 	if(debug_report.size()) {
 		dbuf = new DebugPlot(georef.w, georef.h,
 			do_pinch_excursions ? PLOT_PINCH : PLOT_CONTOURS);
@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
 	// only used if classify==true, but doesn't hurt otherwise
 	const FeatureInterpreter feature_interp(ds, inspect_bandids);
 
-	FeatureBitmap *features_bitmap = NULL;
+	FeatureBitmap *features_bitmap = nullptr;
 	if(classify) {
 		features_bitmap = FeatureBitmap::from_raster(ds, inspect_bandids, ndv_def, dbuf);
 	}
@@ -396,13 +396,13 @@ int main(int argc, char **argv) {
 			if(go.ogr_fmt.empty()) fatal_error("no OGR format was specified");
 			OGRSFDriverH ogr_driver = OGRGetDriverByName(go.ogr_fmt.c_str());
 			if(!ogr_driver) fatal_error("cannot get OGR driver (%s)", go.ogr_fmt.c_str());
-			go.ogr_ds = OGR_Dr_CreateDataSource(ogr_driver, go.ogr_fn.c_str(), NULL);
+			go.ogr_ds = OGR_Dr_CreateDataSource(ogr_driver, go.ogr_fn.c_str(), nullptr);
 			if(!go.ogr_ds) fatal_error(
 				"cannot create OGR data source (does output file already exist?)");
 
 			std::string layer_name = go.ogr_fn;
 
-			OGRSpatialReferenceH sref = NULL;
+			OGRSpatialReferenceH sref = nullptr;
 			if(go.out_cs == CS_EN) {
 				sref = georef.spatial_ref;
 			} else if(go.out_cs == CS_LL) {
@@ -410,7 +410,7 @@ int main(int argc, char **argv) {
 			}
 
 			go.ogr_layer = OGR_DS_CreateLayer(go.ogr_ds, layer_name.c_str(), sref, 
-				(split_polys ? wkbPolygon : wkbMultiPolygon), NULL);
+				(split_polys ? wkbPolygon : wkbMultiPolygon), nullptr);
 			if(!go.ogr_layer) fatal_error("cannot create OGR layer");
 
 			if(classify) {
@@ -432,7 +432,7 @@ int main(int argc, char **argv) {
 
 	typedef std::map<FeatureRawVal, FeatureBitmap::Index>::value_type feature_pair_t;
 	size_t feature_idx = 0;
-	BOOST_FOREACH(const feature_pair_t &feature, features_list) {
+	for(const feature_pair_t &feature: features_list) {
 		Mpoly feature_poly;
 		{
 			BitGrid mask(0, 0);
@@ -447,7 +447,7 @@ int main(int argc, char **argv) {
 			}
 
 			if(do_invert)  mask.invert();
-			if(do_erosion) mask.erode();
+			if(do_erosion) mask.erode(min_erosion);
 
 			feature_poly = trace_mask(mask, georef.w, georef.h, min_ring_area, trace_no_donuts);
 		}
@@ -465,13 +465,13 @@ int main(int argc, char **argv) {
 		} else {
 			trace_no_donuts = output_no_donuts;
 			// If taking only the major ring, no holes are needed.
-			trace_no_donuts |= major_ring_only;
+			// trace_no_donuts |= major_ring_only; -- we want donuts
 		}
 		// If we are only taking the largest ring, and don't need to compute
 		// containments, then skip donuts for speed.
-		if(major_ring_only && containing_options.empty()) {
-			trace_no_donuts = 1;
-		}
+		//if(major_ring_only && containing_options.empty()) {
+		//	trace_no_donuts = 1;
+		//}
 
 		if(VERBOSE) {
 			size_t num_inner = 0, num_outer = 0, total_pts = 0;
@@ -640,6 +640,11 @@ Mpoly take_largest_ring(const Mpoly &mp_in) {
 
 	Mpoly new_mp;
 	new_mp.rings.push_back(mp_in.rings[best_idx]);
+	for (size_t i = 0; i < mp_in.rings.size(); i++) {
+		if (i == best_idx) continue;
+		if (mp_in.rings[i].is_hole)
+			new_mp.rings.push_back(mp_in.rings[i]);
+	}
 	return new_mp;
 }
 
@@ -666,7 +671,7 @@ Mpoly containment_filters(
 ) {
 	std::vector<Vertex> wanted_pts;
 	std::vector<Vertex> unwanted_pts;
-	BOOST_FOREACH(const ContainingOption &opt, containing_options) {
+	for(const ContainingOption &opt: containing_options) {
 		Vertex v;
 		switch(opt.cs) {
 			case CS_XY:
@@ -702,13 +707,13 @@ Mpoly containment_filters(
 	printf("Looking for polygons");
 	if(!wanted_pts.empty()) {
 		printf(" containing:");
-		BOOST_FOREACH(const Vertex &v, wanted_pts) {
+		for(const Vertex &v: wanted_pts) {
 			printf(" (%.1f,%.1f)", v.x, v.y);
 		}
 	}
 	if(!unwanted_pts.empty()) {
 		printf(" not containing:");
-		BOOST_FOREACH(const Vertex &v, unwanted_pts) {
+		for(const Vertex &v: unwanted_pts) {
 			printf(" (%.1f,%.1f)", v.x, v.y);
 		}
 	}
@@ -724,7 +729,7 @@ Mpoly containment_filters(
 		if(outer.is_hole) continue;
 
 		bool contains_wanted_pt = false;
-		BOOST_FOREACH(const Vertex &v, wanted_pts) {
+		for(const Vertex &v: wanted_pts) {
 			if(mp_in.component_contains(v, outer_idx)) {
 				if(VERBOSE) printf("ring %zd contains wanted point %g,%g\n",
 					outer_idx, v.x, v.y);
@@ -738,7 +743,7 @@ Mpoly containment_filters(
 		}
 
 		bool contains_unwanted_pt = false;
-		BOOST_FOREACH(const Vertex &v, unwanted_pts) {
+		for(const Vertex &v: unwanted_pts) {
 			if(mp_in.component_contains(v, outer_idx)) {
 				if(VERBOSE) printf("ring %zd contains unwanted point %g,%g\n",
 					outer_idx, v.x, v.y);

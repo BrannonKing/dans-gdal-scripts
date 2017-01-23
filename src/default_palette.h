@@ -193,6 +193,6 @@ const char *DEFAULT_PALETTE[] = {
 	"6900.000000 106 50 7",
 	"6900.000000 104 46 3",
 	"7000.000000 104 46 3",
-	NULL };
+	nullptr };
 
 } // namespace dangdal

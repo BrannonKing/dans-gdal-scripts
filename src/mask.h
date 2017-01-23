@@ -106,7 +106,7 @@ public:
 		}
 	}
 
-	void erode();
+	void erode(int minimum);
 
 	Vertex centroid();
 };

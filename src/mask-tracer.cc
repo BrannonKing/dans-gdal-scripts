@@ -185,13 +185,13 @@ int64_t min_area, bool no_donuts) {
 
 	if(!depth) {
 		printf("Tracing: ");
-		GDALTermProgress(0, NULL, NULL);
+		GDALTermProgress(0, nullptr, nullptr);
 	}
 
 	if(!skip_child) {
 		for(int y=bounding_bbox.min_y+1; y<bounding_bbox.max_y; y++) {
 			if(!depth) {
-				GDALTermProgress((double)y/(double)(bounding_bbox.height()-1), NULL, NULL);
+				GDALTermProgress((double)y/(double)(bounding_bbox.height()-1), nullptr, nullptr);
 			}
 
 			// make sure the range (y-1,y)*(x-1,x) is in bounds
@@ -246,7 +246,7 @@ int64_t min_area, bool no_donuts) {
 	if(VERBOSE >= 4) debug_write_mask(mask, w, h);
 
 	if(!depth) {
-		GDALTermProgress(1, NULL, NULL);
+		GDALTermProgress(1, nullptr, nullptr);
 	}
 
 	return skip_this;

@@ -99,7 +99,7 @@ void bevel_self_intersections(Mpoly &mp, double amount) {
 		printf("Beveling\n");
 	} else {
 		printf("Beveling: ");
-		GDALTermProgress(0, NULL, NULL);
+		GDALTermProgress(0, nullptr, nullptr);
 	}
 
 	size_t total_pts = 0;
@@ -124,10 +124,10 @@ void bevel_self_intersections(Mpoly &mp, double amount) {
 	assert(total_pts == entries.size());
 
 	if(VERBOSE) printf("finding self-intersections\n");
-	GDALTermProgress(0.1, NULL, NULL);
+	GDALTermProgress(0.1, nullptr, nullptr);
 	// sort by x,y
 	std::sort(entries.begin(), entries.end(), CoordsComparator(&mp));
-	GDALTermProgress(0.8, NULL, NULL);
+	GDALTermProgress(0.8, nullptr, nullptr);
 
 	if(VERBOSE >= 2) {
 		printf("\nbefore grep:\n");
@@ -164,7 +164,7 @@ void bevel_self_intersections(Mpoly &mp, double amount) {
 
 	if(VERBOSE) printf("found %zd self-intersections\n", total_num_touch);
 	if(!total_num_touch) {
-		GDALTermProgress(1, NULL, NULL);
+		GDALTermProgress(1, nullptr, nullptr);
 		if(VERBOSE) printf("beveler finish\n");
 		return;
 	}
@@ -260,7 +260,7 @@ void bevel_self_intersections(Mpoly &mp, double amount) {
 		entry_idx += ring_num_touch;
 	}
 
-	GDALTermProgress(1, NULL, NULL);
+	GDALTermProgress(1, nullptr, nullptr);
 	if(VERBOSE) printf("beveler finish\n");
 }
 

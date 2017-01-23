@@ -42,13 +42,13 @@ DebugPlot::DebugPlot(double w, double h, DebugPlotMode _mode) :
 
 	img_w = size_t(w+1);
 	img_h = size_t(h+1);
-	if(img_w > 800) {
-		img_w = 800;
-		img_h = size_t(800.0 * (h+1) / (w+1));
+	if(img_w > 4000) {
+		img_w = 4000;
+		img_h = size_t(4000.0 * (h+1) / (w+1));
 	}
-	if(img_h > 800) {
-		img_w = size_t(800.0 * (w+1) / (h+1));
-		img_h = 800;
+	if(img_h > 4000) {
+		img_w = size_t(4000.0 * (w+1) / (h+1));
+		img_h = 4000;
 	}
 	if(img_w < 1) img_w = 1;
 	if(img_h < 1) img_h = 1;

@@ -44,16 +44,12 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 #undef PACKAGE_NAME
 #undef PACKAGE_BUGREPORT
 
-#include "config.h"
-
 #include <cmath>
+#include <cstdint>
 #include <stdio.h>
 
-#if HAVE_STDINT_H
-#  include <stdint.h>
-#endif
-
 #if HAVE_INTTYPES_H
+#  include "config.h"
 #  include <inttypes.h>
 #endif
 

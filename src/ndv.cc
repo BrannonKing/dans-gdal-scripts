@@ -30,10 +30,6 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 #include <cstring>
 #include <cassert>
 
-#include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/tokenizer.hpp>
-
 #include "common.h"
 #include "ndv.h"
 #include "datatype_conversion.h"
@@ -65,15 +61,15 @@ NdvInterval::NdvInterval(const std::string &s_in) {
 	size_t delim = s.find("..");
 	try {
 		if(delim == std::string::npos) {
-			min = max = boost::lexical_cast<double>(s);
+			min = max = std::stod(s);
 		} else {
 			std::string s1 = s.substr(0, delim);
 			std::string s2 = s.substr(delim+2);
 			// This is capable of interpreting -Inf and Inf
-			min = boost::lexical_cast<double>(s1);
-			max = boost::lexical_cast<double>(s2);
+			min = std::stod(s1);
+			max = std::stod(s2);
 		}
-	} catch(boost::bad_lexical_cast &e) {
+	} catch(...) {
 		fatal_error("NDV value was not a number");
 	}
 
@@ -81,19 +77,27 @@ NdvInterval::NdvInterval(const std::string &s_in) {
 	second = max;
 }
 
+std::vector<std::string> split(const std::string &text, char sep) {
+	std::vector<std::string> tokens;
+	std::size_t start = 0, end = 0;
+	while ((end = text.find(sep, start)) != std::string::npos) {
+		tokens.push_back(text.substr(start, end - start));
+		start = end + 1;
+	}
+	tokens.push_back(text.substr(start));
+	return tokens;
+}
+
 NdvSlab::NdvSlab(const std::string &s) {
 	//printf("range [%s]\n", s.c_str());
-
-	boost::char_separator<char> sep(" ");
-	typedef boost::tokenizer<boost::char_separator<char> > toker;
-	toker tok(s, sep);
-	for(toker::iterator p=tok.begin(); p!=tok.end(); ++p) {
-		range_by_band.push_back(NdvInterval(*p));
-	}
-
-	if(range_by_band.empty()) {
+	auto splits = split(s, ' ');
+	
+	if(splits.empty()) {
 		fatal_error("could not parse given NDV term [%s]", s.c_str());
 	}
+
+	for (auto &each : splits)
+		range_by_band.push_back(NdvInterval(each));
 }
 
 NdvDef::NdvDef(std::vector<std::string> &arg_list) :
@@ -200,7 +204,7 @@ void NdvDef::getNdvMask(
 		dt_sizes.push_back(GDALGetDataTypeSize(dt_list[i]) / 8);
 	}
 
-	BOOST_FOREACH(const NdvSlab &slab, slabs) {
+	for(const NdvSlab &slab: slabs) {
 		size_t num_intervals = slab.range_by_band.size();
 		assert(num_intervals == bands.size() || num_intervals == 1);
 	}
@@ -216,7 +220,7 @@ void NdvDef::getNdvMask(
 			}
 		}
 
-		BOOST_FOREACH(const NdvSlab &slab, slabs) {
+		for(const NdvSlab &slab: slabs) {
 			bool all_match = true;
 			for(size_t i=0; i<bands.size(); i++) {
 				size_t num_intervals = slab.range_by_band.size();
