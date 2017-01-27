@@ -204,11 +204,7 @@ void BitGrid::erode(int minimum) { // FIXME - untested
 			cnt += lm&&ll;
 			cnt += ll&&ml;
 			cnt += ml&&ul;
-			//if(!(
-			//	(ul&&um) || (um&&ur) || (ur&&mr) || (mr&&lr) ||
-			//	(lr&&lm) || (lm&&ll) || (ll&&ml) || (ml&&ul)
-			//)) set(x, y, false);
-			if (cnt < minimum) 
+			if(cnt < minimum) 
 				set(x, y, false);
 
 			ul=um; ml=mm; ll=lm;

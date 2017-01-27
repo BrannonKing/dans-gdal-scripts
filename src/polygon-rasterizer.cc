@@ -27,6 +27,7 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 
 
 #include <algorithm>
+#include <string>
 #include <vector>
 
 #include "common.h"

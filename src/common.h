@@ -48,8 +48,11 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 #include <cstdint>
 #include <stdio.h>
 
-#if HAVE_INTTYPES_H
+#ifndef _WIN32
 #  include "config.h"
+#endif
+
+#if HAVE_INTTYPES_H
 #  include <inttypes.h>
 #endif
 

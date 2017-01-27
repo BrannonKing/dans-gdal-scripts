@@ -1,8 +1,7 @@
 #ifndef DANGDAL_DATATYPE_CONVERSION_H
 #define DANGDAL_DATATYPE_CONVERSION_H
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <complex>
 #include <stdexcept>
 

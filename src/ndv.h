@@ -30,6 +30,7 @@ This code was developed by Dan Stahlke for the Geographic Information Network of
 #ifndef DANGDAL_NDV_H
 #define DANGDAL_NDV_H
 
+#include <string>
 #include <utility>
 #include <vector>
 #include <complex>

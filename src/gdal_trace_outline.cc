@@ -230,12 +230,12 @@ int main(int argc, char **argv) {
 					debug_report = arg_list[argp++];
 				} else if(arg == "-b") {
 					if(argp == arg_list.size()) usage(cmdname);
-					int bandid = stoi(arg_list[argp++]);
+					int bandid = std::stoi(arg_list[argp++]);
 					inspect_bandids.push_back(bandid);
 				} else if(arg == "-erosion") {
-					if (argp == arg_list.size()) usage(cmdname);
+					if(argp == arg_list.size()) usage(cmdname);
 					do_erosion = 1;
-					min_erosion = stoi(arg_list[argp++]);
+					min_erosion = std::stoi(arg_list[argp++]);
 				} else if(arg == "-invert") {
 					do_invert = 1;
 				} else if(arg == "-split-polys") {
@@ -275,20 +275,20 @@ int main(int argc, char **argv) {
 					output_no_donuts = 1;
 				} else if(arg == "-min-ring-area") {
 					if(argp == arg_list.size()) usage(cmdname);
-					min_ring_area = stoll(arg_list[argp++]);
+					min_ring_area = std::stoll(arg_list[argp++]);
 				} else if(arg == "-dp-toler") {
 					if(argp == arg_list.size()) usage(cmdname);
-					reduction_tolerance = stod(arg_list[argp++]);
+					reduction_tolerance = std::stod(arg_list[argp++]);
 				} else if(arg == "-bevel-size") {
 					if(argp == arg_list.size()) usage(cmdname);
-					bevel_size = stod(arg_list[argp++]);
+					bevel_size = std::stod(arg_list[argp++]);
 					if(bevel_size < 0 || bevel_size >= 1) fatal_error(
 						"-bevel-size must be in the range 0 <= bevel < 1");
 				} else if(arg == "-pinch-excursions") {
 					do_pinch_excursions = 1;
 				} else if(arg == "-llproj-toler") {
 					if(argp == arg_list.size()) usage(cmdname);
-					llproj_toler = stod(arg_list[argp++]);
+					llproj_toler = std::stod(arg_list[argp++]);
 				} else if(arg == "-containing" || arg == "-not-containing") {
 					if(argp+3 > arg_list.size()) usage(cmdname);
 					ContainingOption opt;
@@ -301,8 +301,8 @@ int main(int argc, char **argv) {
 					else if(cs == "percent") opt.cs = CS_PERCENT;
 					else fatal_error("unrecognized coordinate system for -containing option (%s)", cs.c_str());
 
-					opt.x = stod(arg_list[argp++]);
-					opt.y = stod(arg_list[argp++]);
+					opt.x = std::stod(arg_list[argp++]);
+					opt.y = std::stod(arg_list[argp++]);
 
 					containing_options.push_back(opt);
 				} else if(arg == "-h" || arg == "--help") {
@@ -464,14 +464,7 @@ int main(int argc, char **argv) {
 			trace_no_donuts = 0;
 		} else {
 			trace_no_donuts = output_no_donuts;
-			// If taking only the major ring, no holes are needed.
-			// trace_no_donuts |= major_ring_only; -- we want donuts
 		}
-		// If we are only taking the largest ring, and don't need to compute
-		// containments, then skip donuts for speed.
-		//if(major_ring_only && containing_options.empty()) {
-		//	trace_no_donuts = 1;
-		//}
 
 		if(VERBOSE) {
 			size_t num_inner = 0, num_outer = 0, total_pts = 0;
@@ -640,10 +633,11 @@ Mpoly take_largest_ring(const Mpoly &mp_in) {
 
 	Mpoly new_mp;
 	new_mp.rings.push_back(mp_in.rings[best_idx]);
-	for (size_t i = 0; i < mp_in.rings.size(); i++) {
-		if (i == best_idx) continue;
-		if (mp_in.rings[i].is_hole)
+	for(size_t i = 0; i < mp_in.rings.size(); i++) {
+		if(mp_in.rings[i].parent_id == best_idx) {
 			new_mp.rings.push_back(mp_in.rings[i]);
+			new_mp.rings[new_mp.rings.size() - 1].parent_id = 0; // work around const mp_in
+		}
 	}
 	return new_mp;
 }

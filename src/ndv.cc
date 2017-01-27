@@ -157,20 +157,19 @@ NdvDef::NdvDef(const GDALDatasetH ds, const std::vector<size_t> &bandlist) :
 
 		int success;
 		double val = GDALGetRasterNoDataValue(band, &success);
-		if (success) {
+		if(success) {
 			slab.range_by_band.push_back(NdvInterval(val, val));
 		}
-		else
-		{
+		else {
 			auto type = GDALGetRasterDataType(band);
 			auto bits = GDALGetDataTypeSizeBits(type);
-			if (GDALGetRasterColorInterpretation(band) == GCI_AlphaBand) {
+			if(GDALGetRasterColorInterpretation(band) == GCI_AlphaBand) {
 				alpha_idx = bandlist_idx;
-				slab.range_by_band.push_back(NdvInterval(0.0, 0.25 * (1ULL << bits)));
+				slab.range_by_band.push_back(NdvInterval(0.0, 0.0));
 			}
 			else
 			{
-				slab.range_by_band.push_back(NdvInterval(0.0, 1ULL << bits));
+				slab.range_by_band.push_back(NdvInterval(0.0, (1ULL << bits) - 1)); // it's an AND not an OR operation
 			}
 
 			got_error = 1;
